@@ -2,8 +2,9 @@ import numpy as np
 
 #This function performs quaternion multiplication, written as q ⊗ p
 def qmul(q, p):
-    q = w,x,y,z
-    p = W,X,Y,Z
+
+    w, x, y, z = q
+    W, X, Y, Z = p
 
     #Below is the Hamilton Product Formula that combines two rotations together
     return np.array([
