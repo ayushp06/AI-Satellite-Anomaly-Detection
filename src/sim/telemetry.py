@@ -1,4 +1,4 @@
-#Intilizes time, quaternion, and angular velocity to be logged
+#Initializes time, quaternion, and angular velocity to be logged
 def teleBuild(t, q, w):
     return {
         "t" : round(float(t), 3),

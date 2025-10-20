@@ -2,7 +2,6 @@ import numpy as np
 
 #This function performs quaternion multiplication, written as q ⊗ p
 def qmul(q, p):
-
     w, x, y, z = q
     W, X, Y, Z = p
 
