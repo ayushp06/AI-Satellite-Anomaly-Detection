@@ -29,7 +29,6 @@ def main():
         telemetry = teleBuild(t, q, w, faultActive)
         print(telemetry)
         t += dt
-        time.sleep(dt)
 
 if __name__ == "__main__":
     main()
