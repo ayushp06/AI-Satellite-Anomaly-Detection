@@ -1,5 +1,5 @@
-import pandas as pd
 import os
+import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 from threading import Thread, Lock
@@ -10,80 +10,89 @@ class teleLogger:
     def __init__(self, filename="telemetry.parquet", batch_size=50):
         self.filename = filename
         self.batch_size = batch_size
-        self.buffer = []      # in-memory storage
-        self.lock = Lock()    # prevents race conditions
-        self.running = True   # controls the background thread
+        self.buffer = []
+        self.lock = Lock()
+        self.running = True
 
-        self.columns = ["t", "q0", "q1", "q2", "q3", "w0", "w1", "w2"]
+        # Fixed column order (this is the schema contract)
+        self.columns = ["t", "q0", "q1", "q2", "q3", "w0", "w1", "w2", "fault"]
 
-        # If file doesn't exist, create it with proper schema
+        # ✅ IMPORTANT FIX: define a typed schema explicitly (avoid Arrow "null" types)
+        self.schema = pa.schema([
+            ("t", pa.float64()),
+            ("q0", pa.float64()), ("q1", pa.float64()), ("q2", pa.float64()), ("q3", pa.float64()),
+            ("w0", pa.float64()), ("w1", pa.float64()), ("w2", pa.float64()),
+            ("fault", pa.int64())
+        ])
+
+        # Create the Parquet file if it doesn't exist (with the correct schema)
         if not os.path.exists(self.filename):
-            empty_df = pd.DataFrame(columns=self.columns)
-            table = pa.Table.from_pandas(empty_df)
-            pq.write_table(table, self.filename)
+            empty_table = pa.Table.from_arrays(
+                [pa.array([], type=field.type) for field in self.schema],
+                schema=self.schema
+            )
+            pq.write_table(empty_table, self.filename)
 
-        # Initialize ParquetWriter in append mode
-        self.writer = pq.ParquetWriter(self.filename, table.schema, use_dictionary=True)
+        # Open writer with the fixed schema
+        self.writer = pq.ParquetWriter(self.filename, self.schema, use_dictionary=True)
 
-        # Start background thread
-        self.thread = Thread(target=self._background_flush)
+        # Start background thread to flush periodically
+        self.thread = Thread(target=self._background_flush, daemon=True)
         self.thread.start()
 
-
-    def log(self, t, q, w):
+    def log(self, t, q, w, fault=0):
         """
-        Add a new telemetry entry to the buffer.
-        t: timestamp
+        Add a telemetry entry to the buffer.
+        t: float timestamp
         q: quaternion [q0,q1,q2,q3]
         w: angular velocity [w0,w1,w2]
+        fault: int (0 or 1)
         """
-        # Flatten the telemetry entry
-        entry = {"t": round(float(t), 3)}
+        entry = {"t": float(t)}
         for i, val in enumerate(q):
             entry[f"q{i}"] = float(val)
         for i, val in enumerate(w):
             entry[f"w{i}"] = float(val)
+        entry["fault"] = int(fault)
 
-        # Add entry safely
+        flush_now = False
         with self.lock:
             self.buffer.append(entry)
+            flush_now = len(self.buffer) >= self.batch_size
 
-        # Optional: flush immediately if buffer reaches batch size
-        if len(self.buffer) >= self.batch_size:
+        if flush_now:
             self._flush()
 
     def _background_flush(self):
         """
-        Background thread that periodically flushes buffer to Parquet.
+        Background thread: flush buffer once per second.
         """
         while self.running:
-            sleep(1)  # check buffer every second
+            sleep(1)
             self._flush()
 
     def _flush(self):
         """
-        Write buffer to Parquet and clear it.
+        Write the buffer to Parquet using the fixed schema, then clear the buffer.
         """
         with self.lock:
             if not self.buffer:
                 return
 
-            # Convert buffer to PyArrow Table
-            df = pd.DataFrame(self.buffer)
-            table = pa.Table.from_pandas(df)
+            # Force the correct column order every time
+            df = pd.DataFrame(self.buffer, columns=self.columns)
 
-            # Append the batch to the Parquet file
+            # Convert using the fixed schema (prevents type/column drift)
+            table = pa.Table.from_pandas(df, schema=self.schema, preserve_index=False)
+
             self.writer.write_table(table)
-
-            # Clear buffer after flushing
             self.buffer = []
-    
+
     def stop(self):
         """
-        Stop the background thread and flush remaining telemetry.
+        Stop background thread, flush remaining data, close the writer.
         """
-        self.running = False          # stop background thread
-        self.thread.join()            # wait for it to finish
-        self._flush()                 # flush any remaining data
-        self.writer.close()           # close ParquetWriter safely
-
+        self.running = False
+        self.thread.join()
+        self._flush()
+        self.writer.close()
