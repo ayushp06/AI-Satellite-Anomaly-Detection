@@ -1,0 +1,16 @@
+{
+  "dataset_version": "v1",
+  "num_runs": 100,
+  "base_seed": 42,
+  "run_duration": 60.0,
+  "dt": 0.1,
+  "samples_per_run": 601,
+  "fault_distribution": {
+    "none": 19,
+    "gyro_bias": 26,
+    "noise_burst": 26,
+    "freeze": 29
+  },
+  "generation_time_seconds": 101.37716627120972,
+  "output_directory": "D:\\Programming\\Python\\AI Satellite Anomaly Detection\\AI-Satellite-Anomaly-Detection\\data\\dataset_v1"
+}

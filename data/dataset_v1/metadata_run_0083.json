@@ -1,0 +1,32 @@
+{
+  "run_id": 83,
+  "seed": 125,
+  "run_duration": 60.0,
+  "dt": 0.1,
+  "initial_quaternion": [
+    0.07074031882750226,
+    0.9974947655462576,
+    0.0,
+    0.0
+  ],
+  "initial_angular_velocity": [
+    0.05,
+    0.0,
+    0.0
+  ],
+  "fault_injected": true,
+  "fault_windows": [
+    {
+      "start": 20.045823938209466,
+      "end": 26.841899709085883,
+      "kind": "gyro_bias",
+      "params": {
+        "bias": [
+          0.0,
+          -0.014029851812045219,
+          0.0
+        ]
+      }
+    }
+  ]
+}

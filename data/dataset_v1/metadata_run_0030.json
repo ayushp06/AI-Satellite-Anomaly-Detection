@@ -1,0 +1,28 @@
+{
+  "run_id": 30,
+  "seed": 72,
+  "run_duration": 60.0,
+  "dt": 0.1,
+  "initial_quaternion": [
+    0.07074031882750226,
+    0.9974947655462576,
+    0.0,
+    0.0
+  ],
+  "initial_angular_velocity": [
+    0.05,
+    0.0,
+    0.0
+  ],
+  "fault_injected": true,
+  "fault_windows": [
+    {
+      "start": 14.332137200509786,
+      "end": 20.474492646462956,
+      "kind": "noise_burst",
+      "params": {
+        "sigma": 0.024311666043747793
+      }
+    }
+  ]
+}

@@ -16,10 +16,17 @@ Output structure:
     └── ...
 """
 
+import sys
+from pathlib import Path
+
+# Add src directory to Python path
+script_dir = Path(__file__).parent
+project_root = script_dir.parent
+sys.path.insert(0, str(project_root / "src"))
+
 import argparse
 import json
 import time
-from pathlib import Path
 import numpy as np
 
 from sim.attitude import attitudeStep

@@ -1,0 +1,26 @@
+{
+  "run_id": 59,
+  "seed": 101,
+  "run_duration": 60.0,
+  "dt": 0.1,
+  "initial_quaternion": [
+    0.07074031882750226,
+    0.9974947655462576,
+    0.0,
+    0.0
+  ],
+  "initial_angular_velocity": [
+    0.05,
+    0.0,
+    0.0
+  ],
+  "fault_injected": true,
+  "fault_windows": [
+    {
+      "start": 34.25299483091918,
+      "end": 45.165776683213295,
+      "kind": "freeze",
+      "params": {}
+    }
+  ]
+}
