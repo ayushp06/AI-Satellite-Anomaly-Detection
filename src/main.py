@@ -18,6 +18,7 @@ import numpy as np
 from sim.attitude import attitudeStep
 from sim.telemetry import teleBuild
 from sim.logger import teleLogger
+from sim.faults import FaultController, FaultWindow
 
 
 def main():
@@ -36,13 +37,24 @@ def main():
 
     print(f"Running attitude sim at 10 Hz for {t_end}. Ctrl+C to stop.")
 
+    
+    faults = [
+        FaultWindow(start=10.0, end=20.0, kind="gyro_bias", params={"bias": [0.03, 0.0, 0.0]}),
+        FaultWindow(start=30.0, end=35.0, kind="noise_burst", params={"sigma": 0.02}),
+        FaultWindow(start=45.0, end=50.0, kind="freeze", params={}),
+    ]
+    fc = FaultController(windows=faults, seed=42)
+    
     try:
         while t <= t_end:
-            # Step simulation
-            q, w = attitudeStep(q, w, t_b=torque, I=I, dt=dt)
+            # Step simulation -> truth state
+            q, w_true = attitudeStep(q, w, t_b=torque, I=I, dt=dt)
+
+            # Apply faults -> measured telemetry
+            w_meas, fault_flag, fault_kind = fc.apply_w(t, w_true)
             
-            # Build telemetry
-            telemetry = teleBuild(t, q, w, faultFlag=False)
+            # Build telemetry using measured w and fault label
+            telemetry = teleBuild(t, q, w_meas, faultFlag=fault_flag)
 
             # Log telemetry automatically
             logger.log(
