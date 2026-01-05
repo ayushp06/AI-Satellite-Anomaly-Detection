@@ -4,7 +4,7 @@ sim_duration = 60.0
 Telemetry_Colomns = [
     "t",
     "q0", "q1", "q2", "q3",
-    "w0", "w1", "w2"
+    "w0", "w1", "w2",
     "fault"
 ]
 
