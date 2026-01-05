@@ -98,4 +98,4 @@ Phase 5:
   - real-time scoring during simulation
 
 Phase 6:
-- plots + report + optional PySide6 UI
+- plots + report + PySide6 UI

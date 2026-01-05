@@ -1,3 +1,18 @@
+"""
+Main simulation entrypoint.
+
+Responsibilities:
+1. Initialize attitude state
+2. Step dynamics at fixed dt
+3. Build telemetry records
+4. Log telemetry to Parquet
+5. Gracefully shut down after fixed duration
+
+Later:
+- Enable real-time anomaly detection
+- Enable UI hooks
+"""
+
 import time 
 import numpy as np
 from sim.attitude import attitudeStep
