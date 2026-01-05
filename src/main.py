@@ -23,6 +23,7 @@ from sim.logger import teleLogger
 def main():
     dt = 0.1
     t = 0.0
+    t_end = 60.0 #this will make it run for 1 min
 
     q = np.array([1.0, 0.0, 0.0, 0.0])
     w = np.array([0.05, 0.0, 0.0])
@@ -33,18 +34,23 @@ def main():
     # Initialize telemetry logger
     logger = teleLogger(batch_size=50)
 
-    print("Running attitude sim at 10 Hz. Ctrl+C to stop.")
+    print(f"Running attitude sim at 10 Hz for {t_end}. Ctrl+C to stop.")
 
     try:
-        while True:
+        while t <= t_end:
             # Step simulation
             q, w = attitudeStep(q, w, t_b=torque, I=I, dt=dt)
             
             # Build telemetry
-            telemetry = teleBuild(t, q, w)
+            telemetry = teleBuild(t, q, w, faultFlag=False)
 
             # Log telemetry automatically
-            logger.log(*telemetry.values())
+            logger.log(
+                telemetry["t"],
+                telemetry["q"],
+                telemetry["w"],
+                telemetry["fault"]
+            )
 
             # Optional: print to console
             print(telemetry)
@@ -55,6 +61,9 @@ def main():
 
     except KeyboardInterrupt:
         # Gracefully stop the logger when user presses Ctrl+C
+        print("\nSimulation interrupted by user.")
+        
+    finally: 
         print("\nStopping telemetry logging...")
         logger.stop()
         print("Telemetry logging stopped.")
