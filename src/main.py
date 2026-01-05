@@ -4,13 +4,9 @@ Main simulation entrypoint.
 Responsibilities:
 1. Initialize attitude state
 2. Step dynamics at fixed dt
-3. Build telemetry records
+3. Build telemetry records with randomized faults
 4. Log telemetry to Parquet
 5. Gracefully shut down after fixed duration
-
-Later:
-- Enable real-time anomaly detection
-- Enable UI hooks
 """
 
 import time 
@@ -18,32 +14,45 @@ import numpy as np
 from sim.attitude import attitudeStep
 from sim.telemetry import teleBuild
 from sim.logger import teleLogger
-from sim.faults import FaultController, FaultWindow
+from sim.faults import FaultController, sample_fault_windows
 
 
 def main():
     dt = 0.1
     t = 0.0
-    t_end = 60.0 #this will make it run for 1 min
+    t_end = 60.0  # 1 minute simulation
+    
+    # Simulation seed for reproducibility
+    sim_seed = 42
+    rng = np.random.default_rng(sim_seed)
 
+    # Initial state
     q = np.array([1.0, 0.0, 0.0, 0.0])
     w = np.array([0.05, 0.0, 0.0])
 
+    # Satellite properties
     I = np.diag([0.02, 0.02, 0.01])
     torque = np.zeros(3)
 
     # Initialize telemetry logger
     logger = teleLogger(batch_size=50)
 
-    print(f"Running attitude sim at 10 Hz for {t_end}. Ctrl+C to stop.")
-
+    print(f"Running attitude sim at 10 Hz for {t_end}s (seed={sim_seed})")
     
-    faults = [
-        FaultWindow(start=10.0, end=20.0, kind="gyro_bias", params={"bias": [0.03, 0.0, 0.0]}),
-        FaultWindow(start=30.0, end=35.0, kind="noise_burst", params={"sigma": 0.02}),
-        FaultWindow(start=45.0, end=50.0, kind="freeze", params={}),
-    ]
-    fc = FaultController(windows=faults, seed=42)
+    # Sample random fault windows (0 or 1 fault)
+    fault_windows = sample_fault_windows(t_end, rng)
+    
+    if fault_windows:
+        fw = fault_windows[0]
+        print(f"Injecting {fw.kind} fault from {fw.start:.1f}s to {fw.end:.1f}s")
+        print(f"Fault params: {fw.params}")
+    else:
+        print("No faults injected this run")
+    
+    # Initialize fault controller
+    fc = FaultController(windows=fault_windows, seed=sim_seed)
+    
+    print("\nPress Ctrl+C to stop.\n")
     
     try:
         while t <= t_end:
@@ -72,7 +81,6 @@ def main():
             time.sleep(dt)
 
     except KeyboardInterrupt:
-        # Gracefully stop the logger when user presses Ctrl+C
         print("\nSimulation interrupted by user.")
         
     finally: 

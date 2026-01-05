@@ -1,5 +1,6 @@
 import numpy as np
 from dataclasses import dataclass
+from typing import List, Optional
 
 @dataclass
 class FaultWindow:
@@ -10,6 +11,15 @@ class FaultWindow:
 
     def active(self, t: float) -> bool:
         return self.start <= t < self.end
+
+    def to_dict(self):
+        """Serialize to dictionary for metadata logging."""
+        return {
+            "start": self.start,
+            "end": self.end,
+            "kind": self.kind,
+            "params": self.params
+        }
 
 class FaultController:
     """
@@ -58,4 +68,77 @@ class FaultController:
             self._frozen_w = None
 
         return w, fault_flag, fault_kind
+
+
+def sample_fault_windows(run_duration: float, rng: np.random.Generator) -> List[FaultWindow]:
+    """
+    Randomly sample 0 or 1 fault window for a simulation run.
+    
+    Parameters:
+    -----------
+    run_duration : float
+        Total duration of the simulation in seconds
+    rng : np.random.Generator
+        NumPy random generator for reproducibility
+        
+    Returns:
+    --------
+    List[FaultWindow]
+        Empty list (no fault) or list with single FaultWindow
+        
+    Fault sampling rules:
+    - 30% chance of no fault
+    - 70% chance of exactly one fault
+    - Fault types: gyro_bias, noise_burst, freeze (equal probability)
+    - Fault timing: start between 10% and 70% of run duration
+    - Fault duration: 5-15 seconds
+    - Fault severity: randomly sampled within realistic bounds
+    """
+    # Decide if fault occurs (70% probability)
+    if rng.random() < 0.3:
+        return []  # No fault this run
+    
+    # Select fault type uniformly
+    fault_types = ["gyro_bias", "noise_burst", "freeze"]
+    fault_kind = rng.choice(fault_types)
+    
+    # Sample fault timing
+    # Start: between 10% and 70% of run duration (leave time for normal data)
+    earliest_start = 0.1 * run_duration
+    latest_start = 0.7 * run_duration
+    fault_start = rng.uniform(earliest_start, latest_start)
+    
+    # Duration: 5 to 15 seconds
+    fault_duration = rng.uniform(5.0, 15.0)
+    fault_end = min(fault_start + fault_duration, run_duration)
+    
+    # Sample fault-specific parameters
+    params = {}
+    
+    if fault_kind == "gyro_bias":
+        # Bias magnitude: 0.01 to 0.05 rad/s on random axis
+        bias_magnitude = rng.uniform(0.01, 0.05)
+        # Randomly choose dominant axis (x, y, or z)
+        axis = rng.integers(0, 3)
+        bias = np.zeros(3)
+        bias[axis] = bias_magnitude * rng.choice([-1, 1])  # random sign
+        params["bias"] = bias.tolist()
+        
+    elif fault_kind == "noise_burst":
+        # Noise standard deviation: 0.01 to 0.03 rad/s
+        sigma = rng.uniform(0.01, 0.03)
+        params["sigma"] = float(sigma)
+        
+    elif fault_kind == "freeze":
+        # Freeze has no additional parameters
+        params = {}
+    
+    window = FaultWindow(
+        start=fault_start,
+        end=fault_end,
+        kind=fault_kind,
+        params=params
+    )
+    
+    return [window]
 
