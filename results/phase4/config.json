@@ -1,0 +1,9 @@
+{
+  "window_size": 50,
+  "window_seconds": 5.0,
+  "sample_rate_hz": 10,
+  "num_features": 7,
+  "model_type": "lstm",
+  "batch_size": 32,
+  "learning_rate": 0.001
+}

@@ -1,0 +1,11 @@
+{
+  "test_loss": 4.160618782043457,
+  "num_classes": 2,
+  "model_type": "lstm",
+  "window_size": 50,
+  "batch_size": 32,
+  "epochs_trained": 12,
+  "test_accuracy": 0.2689056992530823,
+  "test_precision": 0.2689056992530823,
+  "test_recall": 1.0
+}

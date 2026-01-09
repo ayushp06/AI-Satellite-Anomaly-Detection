@@ -94,7 +94,6 @@ class Trainer:
             str(checkpoint_path),
             monitor="val_loss",
             save_best_only=True,
-            restore_best_weights=True,
             verbose=1
         ))
         
