@@ -1,6 +1,6 @@
 """
 Phase 4: Train fault detection ML model
-Usage: python scripts/train_fault_detector.py --data data/phase3_dataset.csv --model lstm
+Usage: python scripts/train_fault_detector.py --data data/dataset_v1 --data-source dataset_v1 --model lstm
 """
 import argparse
 import logging
@@ -26,8 +26,13 @@ def main():
         description="Phase 4: Fault Detection ML Pipeline"
     )
     parser.add_argument(
-        "--data", type=str, default="data/phase3_dataset.csv",
-        help="Path to input CSV data"
+        "--data", type=str, default="data/dataset_v1",
+        help="Path to data (directory for dataset_v1 or CSV file for single_csv)"
+    )
+    parser.add_argument(
+        "--data-source", type=str, choices=["dataset_v1", "single_csv"],
+        default="dataset_v1",
+        help="Data source type: dataset_v1 (100 CSVs) or single_csv"
     )
     parser.add_argument(
         "--output-dir", type=str, default="results/phase4",
@@ -62,6 +67,7 @@ def main():
     
     config = Phase4Config(
         data_path=Path(args.data),
+        data_source=args.data_source,
         output_dir=Path(args.output_dir),
         model_type=args.model,
         window_seconds=args.window_seconds,

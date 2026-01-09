@@ -1,14 +1,17 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 @dataclass
 class Phase4Config:
     """Configuration for Phase 4 ML pipeline."""
     
-    # Data paths
-    data_path: Path = Path("data/phase3_dataset.csv")
+    # Data paths - can be single CSV or directory of CSVs (dataset v1)
+    data_path: Path = Path("data/dataset_v1")  # Changed default to dataset_v1 folder
     output_dir: Path = Path("results/phase4")
+    
+    # Data source type
+    data_source: str = "dataset_v1"  # "dataset_v1" (multiple CSVs) or "single_csv"
     
     # Time-series window parameters
     window_seconds: float = 5.0
@@ -61,12 +64,15 @@ class Phase4Config:
         self.output_dir = Path(self.output_dir)
         
         if not self.data_path.exists():
-            raise FileNotFoundError(f"Data file not found: {self.data_path}")
+            raise FileNotFoundError(f"Data path not found: {self.data_path}")
         
         if self.window_size < 1:
             raise ValueError(f"window_size must be >= 1, got {self.window_size}")
         
         if self.model_type not in ("lstm", "cnn1d"):
             raise ValueError(f"model_type must be 'lstm' or 'cnn1d', got {self.model_type}")
+        
+        if self.data_source not in ("dataset_v1", "single_csv"):
+            raise ValueError(f"data_source must be 'dataset_v1' or 'single_csv', got {self.data_source}")
         
         self.output_dir.mkdir(parents=True, exist_ok=True)

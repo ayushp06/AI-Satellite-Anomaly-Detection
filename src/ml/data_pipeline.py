@@ -6,6 +6,8 @@ from sklearn.preprocessing import StandardScaler
 import tensorflow as tf
 import logging
 
+from src.ml.dataset_loader import DatasetV1Loader
+
 logger = logging.getLogger(__name__)
 
 class DataPipeline:
@@ -33,6 +35,8 @@ class DataPipeline:
         df = self._load_data()
         df = self._validate_and_prepare(df)
         
+        logger.info(f"Loaded dataset: {len(df)} total rows")
+        
         # Normalize quaternions if configured
         if self.config.normalize_quaternions:
             df = self._normalize_quaternions(df)
@@ -46,6 +50,7 @@ class DataPipeline:
         # Determine number of classes
         self.num_classes = int(np.max(y)) + 1
         logger.info(f"Detected {self.num_classes} classes")
+        logger.info(f"Label distribution: {np.bincount(y)}")
         
         # Chronological train/val/test split
         X_train, y_train, X_val, y_val, X_test, y_test = self._split_data(X, y)
@@ -60,14 +65,32 @@ class DataPipeline:
         val_ds = self._create_dataset(X_val_norm, y_val, shuffle=False)
         test_ds = self._create_dataset(X_test_norm, y_test, shuffle=False)
         
-        logger.info(f"Train: {len(X_train_norm)}, Val: {len(X_val_norm)}, Test: {len(X_test_norm)}")
+        logger.info(f"Split - Train: {len(X_train_norm)}, Val: {len(X_val_norm)}, Test: {len(X_test_norm)}")
         
         return X_train_norm, y_train, X_val_norm, y_val, X_test_norm, y_test, train_ds, val_ds, test_ds
     
     def _load_data(self) -> pd.DataFrame:
-        """Load CSV data."""
+        """Load data from single JSON, CSV, or multiple JSONs (dataset v1)."""
         try:
-            df = pd.read_csv(self.config.data_path)
+            if self.config.data_source == "dataset_v1":
+                logger.info(f"Loading dataset v1 from {self.config.data_path}")
+                loader = DatasetV1Loader(self.config.data_path)
+                df = loader.load_all_datasets()
+            else:  # single file (JSON or CSV)
+                data_path = self.config.data_path
+                logger.info(f"Loading data from {data_path}")
+                
+                if data_path.suffix.lower() == '.json':
+                    import json
+                    with open(data_path, 'r') as f:
+                        data = json.load(f)
+                    if isinstance(data, list):
+                        df = pd.DataFrame(data)
+                    else:
+                        df = pd.DataFrame([data])
+                else:  # CSV
+                    df = pd.read_csv(data_path)
+            
             logger.info(f"Loaded data: {df.shape[0]} rows, {df.shape[1]} columns")
             return df
         except Exception as e:
@@ -79,6 +102,8 @@ class DataPipeline:
         missing = [col for col in required_cols if col not in df.columns]
         
         if missing:
+            logger.warning(f"Missing columns: {missing}")
+            logger.info(f"Available columns: {df.columns.tolist()}")
             raise ValueError(f"Missing columns: {missing}. Available: {df.columns.tolist()}")
         
         # Handle timestamp column for sorting
