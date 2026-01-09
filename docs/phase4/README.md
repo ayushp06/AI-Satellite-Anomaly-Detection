@@ -70,3 +70,12 @@ The latest metrics on disk are shown below. Re-run training after the fixes to r
 - Aggressive window labeling inflates the fault class and can yield degenerate classifiers.
 - Always validate class distribution before training and after windowing.
 - Report probability scores and multiple metrics (Precision/Recall/AUC) to catch failure modes.
+
+
+## Temporal Class Collapse in Time-Series Evaluation
+
+A naive chronological split can allocate all rare fault events to the early portion of the timeline. When that happens, the test set contains only nominal samples, which makes ROC/AUC undefined and hides false negatives. The model may appear to perform well while the evaluation is no longer meaningful for fault detection.
+
+To prevent this, Phase 4 uses block-aware time splitting. Contiguous fault and nominal runs are grouped into blocks, and splits are performed on block boundaries. This preserves temporal order within each block and ensures that each split contains both classes. Windowing is applied after splitting, and normalization is fit only on the training split to avoid leakage.
+
+For spacecraft telemetry, this matters because faults are often rare and clustered. If the evaluation split lacks faults, operational recall cannot be estimated. Block-aware splitting provides a causal, time-respecting evaluation that remains statistically valid for anomaly detection.
