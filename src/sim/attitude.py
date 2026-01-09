@@ -1,6 +1,6 @@
 import numpy as np
 
-#This function performs quaternion multiplication, written as q ⊗ p
+#This function performs quaternion multiplication, written as q * p
 def qmul(q, p):
     w, x, y, z = q
     W, X, Y, Z = p
@@ -26,7 +26,7 @@ def attitudeStep(q, w_b, t_b, I, dt):
     Iw = I @ w_b
     wDot = np.linalg.solve(I, (t_b - np.cross(w_b, Iw)))
     
-    #Semi implicit Euler: update ω first, then q using new ω
+    #Semi implicit Euler: update w first, then q using new w
     wNew = w_b + dt * wDot
     qNew = qnorm(q + dt * dqdt(q, wNew))
     return qNew, wNew

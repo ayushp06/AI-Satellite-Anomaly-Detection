@@ -18,12 +18,12 @@ class Phase4Config:
     sample_rate_hz: int = 10
     stride: int = 1
     
-    # Features and labels - adjust based on your telemetry CSV structure
-    # If your telemetry uses different column names, update these
+    # Features and labels - adjust based on your telemetry structure
+    # Dataset v1 uses q0..q3 and w0..w2 with "fault" as the label.
     feature_columns: List[str] = field(default_factory=lambda: [
-        "q0", "q1", "q2", "q3", "wx", "wy", "wz"
+        "q0", "q1", "q2", "q3", "w0", "w1", "w2"
     ])
-    label_column: str = "label"
+    label_column: str = "fault"
     
     # Data split ratios (chronological split)
     test_split: float = 0.15

@@ -32,7 +32,7 @@ def main():
     parser.add_argument(
         "--data-source", type=str, choices=["dataset_v1", "single_csv"],
         default="dataset_v1",
-        help="Data source type: dataset_v1 (100 CSVs) or single_csv"
+        help="Data source type: dataset_v1 (telemetry parquet runs) or single_csv"
     )
     parser.add_argument(
         "--output-dir", type=str, default="results/phase4",

@@ -37,4 +37,4 @@ print(df.head())
 print(f"Rows: {len(df)}")
 
 # If we reach this point, everything passed
-print("OK ✅ Phase 1 telemetry is valid")
+print("OK: Phase 1 telemetry is valid")

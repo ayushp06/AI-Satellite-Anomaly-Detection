@@ -85,12 +85,12 @@ results/phase4/
 Input CSV must have:
 
 - **Timestamp column** (named: `timestamp`, `t`, or `time`) — for sorting
-- **Features**: `q0, q1, q2, q3` (quaternion), `wx, wy, wz` (angular velocity)
-- **Label**: Integer column named `label` (0=nominal, 1+=fault classes)
+- **Features**: `q0, q1, q2, q3` (quaternion), `w0, w1, w2` (angular velocity)
+- **Label**: Integer column named `fault` (0=nominal, 1=fault)
 
 Example:
 ```
-timestamp,q0,q1,q2,q3,wx,wy,wz,label
+timestamp,q0,q1,q2,q3,w0,w1,w2,fault
 0.0,0.999,-0.001,0.001,0.002,0.01,-0.005,0.002,0
 0.1,0.999,-0.001,0.001,0.002,0.01,-0.005,0.002,0
 ```

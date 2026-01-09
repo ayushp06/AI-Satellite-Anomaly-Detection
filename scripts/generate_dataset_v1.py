@@ -9,12 +9,13 @@ Usage:
 
 Output structure:
     data/dataset_v1/
-    ├── telemetry_run_0000.parquet
-    ├── metadata_run_0000.json
-    ├── telemetry_run_0001.parquet
-    ├── metadata_run_0001.json
-    └── ...
+    |-- telemetry_run_0000.parquet
+    |-- metadata_run_0000.json
+    |-- telemetry_run_0001.parquet
+    |-- metadata_run_0001.json
+    `-- ...
 """
+
 
 import sys
 from pathlib import Path

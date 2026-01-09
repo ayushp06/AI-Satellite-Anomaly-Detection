@@ -40,7 +40,7 @@ class teleLogger:
         # Fixed column order (this is the schema contract)
         self.columns = ["t", "q0", "q1", "q2", "q3", "w0", "w1", "w2", "fault"]
 
-        # ✅ IMPORTANT FIX: define a typed schema explicitly (avoid Arrow "null" types)
+        # IMPORTANT FIX: define a typed schema explicitly (avoid Arrow "null" types)
         self.schema = pa.schema([
             ("t", pa.float64()),
             ("q0", pa.float64()), ("q1", pa.float64()), ("q2", pa.float64()), ("q3", pa.float64()),

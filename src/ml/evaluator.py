@@ -109,7 +109,7 @@ class Evaluator:
             
             title = f"Window {window_idx}: True={true_label}, Pred={pred_label}"
             if not is_correct:
-                title += " ✗"
+                title += " [incorrect]"
             ax.set_title(title)
             ax.set_xlabel("Timestep")
             ax.set_ylabel("Normalized Value")
