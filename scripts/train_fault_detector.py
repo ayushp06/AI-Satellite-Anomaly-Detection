@@ -59,6 +59,15 @@ def main():
         help="Learning rate"
     )
     parser.add_argument(
+        "--window-label-mode", type=str, choices=["center", "percentage"],
+        default="center",
+        help="Window labeling mode: center or percentage"
+    )
+    parser.add_argument(
+        "--fault-ratio-threshold", type=float, default=0.2,
+        help="Fault ratio threshold for percentage labeling"
+    )
+    parser.add_argument(
         "--eval-only", action="store_true",
         help="Run evaluation only (skip training)"
     )
@@ -73,7 +82,9 @@ def main():
         window_seconds=args.window_seconds,
         batch_size=args.batch_size,
         epochs=args.epochs,
-        learning_rate=args.learning_rate
+        learning_rate=args.learning_rate,
+        window_label_mode=args.window_label_mode,
+        fault_ratio_threshold=args.fault_ratio_threshold
     )
     
     if args.eval_only:

@@ -17,6 +17,10 @@ class Phase4Config:
     window_seconds: float = 5.0
     sample_rate_hz: int = 10
     stride: int = 1
+
+    # Window labeling strategy
+    window_label_mode: str = "center"  # "center" or "percentage"
+    fault_ratio_threshold: float = 0.2
     
     # Features and labels - adjust based on your telemetry structure
     # Dataset v1 uses q0..q3 and w0..w2 with "fault" as the label.
@@ -76,4 +80,14 @@ class Phase4Config:
         if self.data_source not in ("dataset_v1", "single_csv"):
             raise ValueError(f"data_source must be 'dataset_v1' or 'single_csv', got {self.data_source}")
         
+        if self.window_label_mode not in ("center", "percentage"):
+            raise ValueError(
+                f"window_label_mode must be 'center' or 'percentage', got {self.window_label_mode}"
+            )
+
+        if not (0.0 <= self.fault_ratio_threshold <= 1.0):
+            raise ValueError(
+                f"fault_ratio_threshold must be between 0 and 1, got {self.fault_ratio_threshold}"
+            )
+
         self.output_dir.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,24 @@
+{
+  "window_size": 50,
+  "window_seconds": 5.0,
+  "sample_rate_hz": 10,
+  "stride": 1,
+  "window_label_mode": "percentage",
+  "fault_ratio_threshold": 0.2,
+  "num_features": 7,
+  "feature_columns": [
+    "q0",
+    "q1",
+    "q2",
+    "q3",
+    "w0",
+    "w1",
+    "w2"
+  ],
+  "label_column": "fault",
+  "data_source": "dataset_v1",
+  "model_type": "lstm",
+  "batch_size": 32,
+  "learning_rate": 0.001,
+  "random_seed": 42
+}

@@ -105,7 +105,7 @@ def build_model(config, num_classes: int) -> keras.Model:
     # Compile
     if num_classes == 2:
         loss = "binary_crossentropy"
-        metrics = ["accuracy", keras.metrics.Precision(), keras.metrics.Recall()]
+        metrics = ["accuracy", keras.metrics.Precision(name="precision"), keras.metrics.Recall(name="recall"), keras.metrics.AUC(name="auc")]
     else:
         loss = "sparse_categorical_crossentropy"
         metrics = ["accuracy"]

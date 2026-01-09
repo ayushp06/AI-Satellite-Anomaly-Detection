@@ -9,6 +9,7 @@ from tensorflow import keras
 from config.phase4_config import Phase4Config
 from src.ml.data_pipeline import DataPipeline
 from src.ml.model_builder import build_model
+from src.ml.utils import set_seeds
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +31,17 @@ class Trainer:
         logger.info("=" * 60)
         logger.info("Phase 4: Fault Detection ML Training")
         logger.info("=" * 60)
+
+        set_seeds(self.config.random_seed)
+
         
         # Load and process data
         logger.info("Loading data...")
         pipeline = DataPipeline(self.config)
         X_train, y_train, X_val, y_val, X_test, y_test, train_ds, val_ds, test_ds = pipeline.load_and_process()
+
+        class_weight = self._compute_class_weight(y_train)
+        logger.info(f"Class weights: {class_weight}")
         
         # Build model
         logger.info(f"Building {self.config.model_type} model...")
@@ -51,6 +58,7 @@ class Trainer:
             validation_data=val_ds,
             epochs=self.config.epochs,
             callbacks=callbacks,
+            class_weight=class_weight,
             verbose=1
         )
         
@@ -71,6 +79,7 @@ class Trainer:
             metrics["test_accuracy"] = float(test_metrics[0])
             metrics["test_precision"] = float(test_metrics[1])
             metrics["test_recall"] = float(test_metrics[2])
+            metrics["test_auc"] = float(test_metrics[3])
         else:
             metrics["test_accuracy"] = float(test_metrics[0])
         
@@ -84,12 +93,21 @@ class Trainer:
         
         return metrics
     
+    def _compute_class_weight(self, y_train: np.ndarray) -> dict:
+        """Compute class weights for binary classification."""
+        counts = np.bincount(y_train.astype(int), minlength=2)
+        if counts.min() == 0:
+            raise ValueError(f"Training data missing a class: {counts}")
+        total = counts.sum()
+        weights = total / (2.0 * counts)
+        return {0: float(weights[0]), 1: float(weights[1])}
+
     def _setup_callbacks(self) -> list:
         """Setup training callbacks."""
         callbacks = []
         
         # Model checkpoint
-        checkpoint_path = self.config.output_dir / "best_model.keras"
+        checkpoint_path = self.config.output_dir / "model.keras"
         callbacks.append(keras.callbacks.ModelCheckpoint(
             str(checkpoint_path),
             monitor="val_loss",
@@ -121,25 +139,32 @@ class Trainer:
                        test_ds: tf.data.Dataset):
         """Save model, scaler, config, and metrics."""
         # Save model
-        model_path = self.config.output_dir / "best_model.keras"
+        model_path = self.config.output_dir / "model.keras"
         self.model.save(str(model_path))
         logger.info(f"Model saved to {model_path}")
         
         # Save scaler
-        scaler_path = self.config.output_dir / "scaler.pkl"
+        scaler_path = self.config.output_dir / "scaler.joblib"
         pipeline.save_scaler(scaler_path)
         
         # Save config
-        config_path = self.config.output_dir / "config.json"
+        config_path = self.config.output_dir / "config_used.json"
         with open(config_path, "w") as f:
             config_dict = {
                 "window_size": self.config.window_size,
                 "window_seconds": self.config.window_seconds,
                 "sample_rate_hz": self.config.sample_rate_hz,
+                "stride": self.config.stride,
+                "window_label_mode": self.config.window_label_mode,
+                "fault_ratio_threshold": self.config.fault_ratio_threshold,
                 "num_features": self.config.num_features,
+                "feature_columns": self.config.feature_columns,
+                "label_column": self.config.label_column,
+                "data_source": self.config.data_source,
                 "model_type": self.config.model_type,
                 "batch_size": self.config.batch_size,
                 "learning_rate": self.config.learning_rate,
+                "random_seed": self.config.random_seed,
             }
             json.dump(config_dict, f, indent=2)
         logger.info(f"Config saved to {config_path}")

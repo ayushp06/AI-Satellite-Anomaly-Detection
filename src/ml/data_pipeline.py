@@ -36,6 +36,8 @@ class DataPipeline:
         df = self._validate_and_prepare(df)
         
         logger.info(f"Loaded dataset: {len(df)} total rows")
+        self._log_label_distribution(df[self.config.label_column].values, "raw rows")
+        self._check_class_balance(df[self.config.label_column].values, "raw rows")
         
         # Normalize quaternions if configured
         if self.config.normalize_quaternions:
@@ -44,6 +46,9 @@ class DataPipeline:
         # Create windows
         X, y = self._create_windows(df)
         
+        self._log_label_distribution(y, "windowed")
+        self._check_class_balance(y, "windowed")
+
         if len(X) == 0:
             raise ValueError("No windows created. Check window_size and data length.")
         
@@ -98,29 +103,71 @@ class DataPipeline:
     
     def _validate_and_prepare(self, df: pd.DataFrame) -> pd.DataFrame:
         """Validate required columns and sort by timestamp."""
+        df = self._align_feature_columns(df)
+
         required_cols = self.config.feature_columns + [self.config.label_column]
         missing = [col for col in required_cols if col not in df.columns]
-        
+
         if missing:
             logger.warning(f"Missing columns: {missing}")
             logger.info(f"Available columns: {df.columns.tolist()}")
             raise ValueError(f"Missing columns: {missing}. Available: {df.columns.tolist()}")
-        
+
         # Handle timestamp column for sorting
         timestamp_col = None
         for col in ["timestamp", "t", "time"]:
             if col in df.columns:
                 timestamp_col = col
                 break
-        
+
         if timestamp_col:
             df = df.sort_values(by=timestamp_col).reset_index(drop=True)
             logger.info(f"Sorted by {timestamp_col}")
         else:
             logger.warning("No timestamp column found; assuming data is pre-sorted")
-        
+
         return df
-    
+
+    def _align_feature_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Create alias columns when alternate names are present."""
+        alias_map = {
+            "w0": "wx",
+            "w1": "wy",
+            "w2": "wz",
+            "wx": "w0",
+            "wy": "w1",
+            "wz": "w2",
+        }
+        for expected in self.config.feature_columns:
+            if expected not in df.columns:
+                alias = alias_map.get(expected)
+                if alias and alias in df.columns:
+                    df[expected] = df[alias]
+
+        if self.config.label_column not in df.columns:
+            if self.config.label_column == "fault" and "label" in df.columns:
+                df["fault"] = df["label"]
+        return df
+
+    def _log_label_distribution(self, labels: np.ndarray, context: str):
+        labels = labels.astype(int)
+        counts = np.bincount(labels, minlength=2)
+        total = counts.sum()
+        ratios = counts / total if total else counts
+        logger.info(f"{context} label distribution: {counts} (ratio {ratios})")
+
+    def _check_class_balance(self, labels: np.ndarray, context: str):
+        labels = labels.astype(int)
+        counts = np.bincount(labels, minlength=2)
+        total = counts.sum()
+        if total == 0:
+            raise ValueError(f"No labels available for {context}")
+        dominant_ratio = counts.max() / total
+        if dominant_ratio > 0.95:
+            raise ValueError(
+                f"Class imbalance too high in {context}: {counts} (ratio {dominant_ratio:.2%})"
+            )
+
     def _normalize_quaternions(self, df: pd.DataFrame) -> pd.DataFrame:
         """Normalize quaternion vectors to unit length."""
         q_cols = ["q0", "q1", "q2", "q3"]
@@ -140,37 +187,42 @@ class DataPipeline:
         """Create sliding windows from time-series data."""
         X_list = []
         y_list = []
-        
+
         feature_data = df[self.config.feature_columns].values
-        label_data = df[self.config.label_column].values
-        
+        label_data = df[self.config.label_column].values.astype(int)
+
         num_samples = len(feature_data)
         window_size = self.config.window_size
         stride = self.config.stride
-        
-        for start in range(0, num_samples - window_size + 1, stride):
-            end = start + window_size
-            window_features = feature_data[start:end]
-            window_labels = label_data[start:end]
-            
-            # Label assignment: most frequent (mode) for multi-class, max for binary
-            unique_labels = np.unique(window_labels)
-            if len(unique_labels) == 2 and set(unique_labels) == {0, 1}:
-                # Binary: use max (if any fault, label is 1)
-                window_label = int(np.max(window_labels))
+
+        if self.config.window_label_mode == "center":
+            center_offset = window_size // 2
+        else:
+            center_offset = None
+
+        for start_idx in range(0, num_samples - window_size + 1, stride):
+            end_idx = start_idx + window_size
+            window_features = feature_data[start_idx:end_idx]
+            window_labels = label_data[start_idx:end_idx]
+
+            if self.config.window_label_mode == "center":
+                window_label = int(window_labels[center_offset])
+            elif self.config.window_label_mode == "percentage":
+                fault_ratio = float(np.mean(window_labels))
+                window_label = int(fault_ratio >= self.config.fault_ratio_threshold)
             else:
-                # Multi-class: use mode
-                window_label = int(np.bincount(window_labels.astype(int)).argmax())
-            
+                raise ValueError(f"Unknown window_label_mode: {self.config.window_label_mode}")
+
             X_list.append(window_features)
             y_list.append(window_label)
-        
+
         X = np.array(X_list, dtype=np.float32)
         y = np.array(y_list, dtype=np.int32)
-        
+
         logger.info(f"Created {len(X)} windows of size {window_size}")
+        logger.info(f"Window labeling mode: {self.config.window_label_mode}")
         return X, y
-    
+
     def _split_data(self, X: np.ndarray, y: np.ndarray) -> Tuple[
         np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
     ]:
@@ -186,6 +238,7 @@ class DataPipeline:
         X_test, y_test = X[n_train + n_val:], y[n_train + n_val:]
         
         logger.info(f"Split: train={len(X_train)}, val={len(X_val)}, test={len(X_test)}")
+        logger.info("Chronological split applied (no shuffling).")
         return X_train, y_train, X_val, y_val, X_test, y_test
     
     def _normalize_features(self, X_train: np.ndarray, X_val: np.ndarray, 
