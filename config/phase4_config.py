@@ -7,18 +7,19 @@ class Phase4Config:
     """Configuration for Phase 4 ML pipeline."""
     
     # Data paths - can be single CSV or directory of CSVs (dataset v1)
-    data_path: Path = Path("data/dataset_v1")  # Changed default to dataset_v1 folder
+    data_path: Path = Path("data/dataset_v1")  # Directory with JSON metadata files
     output_dir: Path = Path("results/phase4")
     
     # Data source type
-    data_source: str = "dataset_v1"  # "dataset_v1" (multiple CSVs) or "single_csv"
+    data_source: str = "dataset_v1"  # "dataset_v1" (multiple JSONs) or "single_csv"
     
     # Time-series window parameters
     window_seconds: float = 5.0
     sample_rate_hz: int = 10
     stride: int = 1
     
-    # Features and labels
+    # Features and labels - adjust based on your telemetry CSV structure
+    # If your telemetry uses different column names, update these
     feature_columns: List[str] = field(default_factory=lambda: [
         "q0", "q1", "q2", "q3", "wx", "wy", "wz"
     ])

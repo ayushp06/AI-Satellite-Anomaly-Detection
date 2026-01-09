@@ -21,62 +21,77 @@ class DatasetV1Loader:
     
     def load_all_datasets(self) -> pd.DataFrame:
         """
-        Load all JSON files from the dataset directory and concatenate.
+        Load all JSON files from the dataset directory, extract telemetry paths,
+        and concatenate all telemetry data.
         
         Returns:
-            Combined DataFrame with all data
+            Combined DataFrame with all telemetry data
         """
         json_files = sorted(self.dataset_dir.glob("*.json"))
         
         if not json_files:
             raise FileNotFoundError(f"No JSON files found in {self.dataset_dir}")
         
-        logger.info(f"Found {len(json_files)} dataset files")
+        logger.info(f"Found {len(json_files)} dataset metadata files")
         
         dfs = []
         for json_file in json_files:
             try:
-                df = self._load_json_file(json_file)
-                dfs.append(df)
-                logger.debug(f"Loaded {json_file.name}: {len(df)} rows")
+                df = self._load_telemetry_from_json(json_file)
+                if df is not None and len(df) > 0:
+                    dfs.append(df)
+                    logger.debug(f"Loaded telemetry from {json_file.name}: {len(df)} rows")
             except Exception as e:
-                logger.warning(f"Failed to load {json_file.name}: {e}")
+                logger.warning(f"Failed to load telemetry from {json_file.name}: {e}")
         
         if not dfs:
-            raise ValueError("No datasets loaded successfully")
+            raise ValueError("No telemetry data loaded successfully")
         
         combined_df = pd.concat(dfs, ignore_index=True)
-        logger.info(f"Combined dataset: {len(combined_df)} total rows from {len(dfs)} files")
+        logger.info(f"Combined telemetry: {len(combined_df)} total rows from {len(dfs)} datasets")
         
         return combined_df
     
-    def _load_json_file(self, json_file: Path) -> pd.DataFrame:
+    def _load_telemetry_from_json(self, json_file: Path) -> pd.DataFrame:
         """
-        Load a single JSON file and convert to DataFrame.
-        Handles different JSON structures.
+        Load a JSON metadata file, find the output directory,
+        and load all telemetry CSV files from it.
         """
         with open(json_file, 'r') as f:
-            data = json.load(f)
+            metadata = json.load(f)
         
-        # Handle different JSON structures
-        if isinstance(data, list):
-            # Array of records
-            df = pd.DataFrame(data)
-        elif isinstance(data, dict):
-            # Check if it has a 'data' key with records
-            if 'data' in data and isinstance(data['data'], list):
-                df = pd.DataFrame(data['data'])
-            # Check if keys are column names
-            elif all(isinstance(v, list) for v in data.values()):
-                df = pd.DataFrame(data)
-            else:
-                # Single record dict
-                df = pd.DataFrame([data])
-        else:
-            raise ValueError(f"Unexpected JSON structure in {json_file.name}")
+        # Extract output directory path
+        output_dir = metadata.get('output_directory')
+        if not output_dir:
+            logger.warning(f"No output_directory in {json_file.name}")
+            return None
         
-        return df
+        output_path = Path(output_dir)
+        if not output_path.exists():
+            logger.warning(f"Output directory not found: {output_dir}")
+            return None
+        
+        # Find all telemetry CSV files in the output directory
+        telemetry_files = sorted(output_path.glob("*.csv"))
+        if not telemetry_files:
+            logger.warning(f"No CSV telemetry files in {output_dir}")
+            return None
+        
+        # Load and combine all telemetry files from this dataset
+        dfs = []
+        for csv_file in telemetry_files:
+            try:
+                df = pd.read_csv(csv_file)
+                dfs.append(df)
+            except Exception as e:
+                logger.warning(f"Failed to load {csv_file.name}: {e}")
+        
+        if not dfs:
+            return None
+        
+        combined = pd.concat(dfs, ignore_index=True)
+        return combined
     
     def get_dataset_count(self) -> int:
-        """Get number of dataset files."""
+        """Get number of dataset metadata files."""
         return len(list(self.dataset_dir.glob("*.json")))
